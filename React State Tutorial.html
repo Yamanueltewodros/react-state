@@ -1,0 +1,611 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React State Tutorial</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    h1, h2, h3, h4 {
+      color: #2c3e50;
+    }
+    h1 {
+      text-align: center;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+    }
+    h2 {
+      margin-top: 30px;
+      border-left: 4px solid #3498db;
+      padding-left: 10px;
+    }
+    h3, h4 {
+      margin-top: 20px;
+    }
+    p {
+      margin: 10px 0;
+    }
+    ul, ol {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    code {
+      background-color: #2d2d2d;
+      color: #f8f8f2;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    pre {
+      background-color: #2d2d2d;
+      color: #f8f8f2;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: 'Courier New', Courier, monospace;
+      margin: 10px 0;
+      border-left: 4px solid #3498db;
+    }
+    .code-comment {
+      color: #6272a4;
+    }
+    .code-keyword {
+      color: #ff79c6;
+    }
+    .code-string {
+      color: #f1fa8c;
+    }
+    .code-function {
+      color: #50fa7b;
+    }
+    .code-number {
+      color: #bd93f9;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    .highlight {
+      background-color: #e8f4f8;
+      padding: 10px;
+      border-radius: 4px;
+      border-left: 4px solid #3498db;
+    }
+    button, input, form {
+      margin: 10px 0;
+    }
+    button {
+      background-color: #3498db;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>React State Tutorial</h1>
+
+    <div class="section">
+      <h2>What is React State?</h2>
+      <p>State is a built-in mechanism in React that allows components to manage and store data that can change over time. When a component's state changes, React automatically re-renders the component to reflect the updated state in the UI. State is typically used to handle dynamic data, such as form inputs, toggles, counters, or fetched data.</p>
+      <p><strong>Key points about state:</strong></p>
+      <ul>
+        <li><strong>Local to a component</strong>: State is managed within a component (or passed down via props).</li>
+        <li><strong>Mutable (but indirectly)</strong>: You don't modify state directly; instead, you use specific functions to update it.</li>
+        <li><strong>Triggers re-renders</strong>: When state changes, React re-renders the component to reflect the new state.</li>
+        <li><strong>Only in functional or class components</strong>: State is used in functional components (with hooks) or class components (with <code>this.state</code>).</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>State in Functional Components (Using Hooks)</h2>
+      <p>Since the introduction of React Hooks in React 16.8, functional components have become the preferred way to manage state. The primary hook for managing state is <code>useState</code>.</p>
+
+      <h3>Using <code>useState</code> Hook</h3>
+      <p>The <code>useState</code> hook allows you to add state to functional components. It returns an array with two elements:</p>
+      <ol>
+        <li>The current state value.</li>
+        <li>A function to update the state.</li>
+      </ol>
+      <p><strong>Syntax:</strong></p>
+      <pre>
+<span class="code-keyword">import</span> React, { <span class="code-function">useState</span> } from <span class="code-string">'react'</span>;
+
+<span class="code-keyword">function</span> MyComponent() {
+  <span class="code-keyword">const</span> [state, setState] = <span class="code-function">useState</span>(initialState);
+  <span class="code-comment">// state: current state value</span>
+  <span class="code-comment">// setState: function to update state</span>
+  <span class="code-comment">// initialState: initial value of the state (can be any data type)</span>
+}
+      </pre>
+
+      <h4>Example: Counter Component</h4>
+      <pre>
+<span class="code-keyword">import</span> React, { <span class="code-function">useState</span> } from <span class="code-string">'react'</span>;
+
+<span class="code-keyword">function</span> Counter() {
+  <span class="code-keyword">const</span> [count, setCount] = <span class="code-function">useState</span>(<span class="code-number">0</span>);
+
+  <span class="code-keyword">return</span> (
+    &lt;div&gt;
+      &lt;p&gt;Count: {count}&lt;/p&gt;
+      &lt;button onClick={() => setCount(count + <span class="code-number">1</span>)}&gt;Increment&lt;/button&gt;
+      &lt;button onClick={() => setCount(count - <span class="code-number">1</span>)}&gt;Decrement&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}
+      </pre>
+      <p>
+        - <code>useState(0)</code> initializes <code>count</code> to <code>0</code>.<br>
+        - <code>setCount</code> updates the state, triggering a re-render.<br>
+        - Clicking the buttons updates <code>count</code>, and the UI reflects the new value.
+      </p>
+
+      <h3>Rules of <code>useState</code></h3>
+      <ul>
+        <li><strong>Only call hooks at the top level</strong>: Don't call <code>useState</code> inside loops, conditions, or nested functions.</li>
+        <li><strong>Only in functional components or custom hooks</strong>: Don't use <code>useState</code> in regular JavaScript functions.</li>
+        <li><strong>State updates are asynchronous</strong>: React batches state updates for performance, so <code>setState</code> doesn't immediately reflect the new value.</li>
+      </ul>
+
+      <h3>Updating Complex State (Objects, Arrays)</h3>
+      <p>When state is an object or array, you need to ensure immutability by creating a new copy of the state when updating it.</p>
+
+      <h4>Example: Managing an Object</h4>
+      <pre>
+<span class="code-keyword">import</span> React, { <span class="code-function">useState</span> } from <span class="code-string">'react'</span>;
+
+<span class="code-keyword">function</span> UserForm() {
+  <span class="code-keyword">const</span> [user, setUser] = <span class="code-function">useState</span>({ name: <span class="code-string">''</span>, age: <span class="code-number">0</span> });
+
+  <span class="code-keyword">const</span> <span class="code-function">handleNameChange</span> = (e) => {
+    setUser({ ...user, name: e.target.value });
+  };
+
+  <span class="code-keyword">const</span> <span class="code-function">handleAgeChange</span> = (e) => {
+    setUser({ ...user, age: <span class="code-function">parseInt</span>(e.target.value) });
+  };
+
+  <span class="code-keyword">return</span> (
+    &lt;div&gt;
+      &lt;input type=<span class="code-string">"text"</span> value={user.name} onChange={handleNameChange} placeholder=<span class="code-string">"Name"</span> /&gt;
+      &lt;input type=<span class="code-string">"number"</span> value={user.age} onChange={handleAgeChange} placeholder=<span class="code-string">"Age"</span> /&gt;
+      &lt;p&gt;User: {user.name}, {user.age}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}
+      </pre>
+      <p>
+        - The spread operator (<code>...user</code>) creates a new object, preserving existing properties while updating specific ones.<br>
+        - Directly mutating state (e.g., <code>user.name = 'newName'</code>) won't trigger a re-render.
+      </p>
+
+      <h4>Example: Managing an Array</h4>
+      <pre>
+<span class="code-keyword">import</span> React, { <span class="code-function">useState</span> } from <span class="code-string">'react'</span>;
+
+<span class="code-keyword">function</span> TodoList() {
+  <span class="code-keyword">const</span> [todos, setTodos] = <span class="code-function">useState</span>([]);
+
+  <span class="code-keyword">const</span> <span class="code-function">addTodo</span> = (text) => {
+    setTodos([...todos, { id: todos.length + <span class="code-number">1</span>, text }]);
+  };
+
+  <span class="code-keyword">return</span> (
+    &lt;div&gt;
+      &lt;button onClick={() => addTodo(<span class="code-string">'New Todo'</span>)}&gt;Add Todo&lt;/button&gt;
+      &lt;ul&gt;
+        {todos.map((todo) => (
+          &lt;li key={todo.id}&gt;{todo.text}&lt;/li&gt;
+        ))}
+      &lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}
+      </pre>
+      <p>
+        - The spread operator (<code>...todos</code>) creates a new array with the existing todos plus the new one.<br>
+        - Avoid mutating arrays directly (e.g., <code>todos.push()</code>).
+      </p>
+
+      <h3>Using the Functional Update Form</h3>
+      <p>When the new state depends on the previous state, use the functional update form to avoid issues with asynchronous updates.</p>
+      <pre>
+<span class="code-keyword">const</span> [count, setCount] = <span class="code-function">useState</span>(<span class="code-number">0</span>);
+
+<span class="code-comment">// Instead of this:</span>
+<span class="code-keyword">const</span> <span class="code-function">handleClick</span> = () => {
+  setCount(count + <span class="code-number">1</span>); <span class="code-comment">// May not always use the latest state</span>
+};
+
+<span class="code-comment">// Use this:</span>
+<span class="code-keyword">const</span> <span class="code-function">handleClick</span> = () => {
+  setCount((prevCount) => prevCount + <span class="code-number">1</span>); <span class="code-comment">// Always uses the latest state</span>
+};
+      </pre>
+      <p>The functional update form (<code>prevCount => prevCount + 1</code>) ensures the update is based on the latest state, especially useful in rapid or batched updates.</p>
+    </div>
+
+    <div class="section">
+      <h2>State in Class Components</h2>
+      <p>Before hooks, class components used <code>this.state</code> and <code>this.setState</code> to manage state. While functional components are now preferred, understanding class-based state is useful for legacy code.</p>
+      <p><strong>Syntax:</strong></p>
+      <pre>
+<span class="code-keyword">import</span> React from <span class="code-string">'react'</span>;
+
+<span class="code-keyword">class</span> Counter <span class="code-keyword">extends</span> React.Component {
+  <span class="code-keyword">constructor</span>(props) {
+    <span class="code-keyword">super</span>(props);
+    <span class="code-keyword">this</span>.state = {
+      count: <span class="code-number">0</span>,
+    };
+  }
+
+  <span class="code-function">handleIncrement</span> = () => {
+    <span class="code-keyword">this</span>.setState({ count: <span class="code-keyword">this</span>.state.count + <span class="code-number">1</span> });
+  };
+
+  <span class="code-function">render</span>() {
+    <span class="code-keyword">return</span> (
+      &lt;div&gt;
+        &lt;p&gt;Count: {<span class="code-keyword">this</span>.state.count}&lt;/p&gt;
+        &lt;button onClick={<span class="code-keyword">this</span>.handleIncrement}&gt;Increment&lt;/button&gt;
+      &lt;/div&gt;
+    );
+  }
+}
+      </pre>
+      <p>
+        - <code>this.state</code> holds the state object.<br>
+        - <code>this.setState</code> updates the state and triggers a re-render.<br>
+        - Like <code>useState</code>, <code>setState</code> is asynchronous and can use a functional update:
+      </p>
+      <pre>
+<span class="code-keyword">this</span>.setState((prevState) => ({ count: prevState.count + <span class="code-number">1</span> }));
+      </pre>
+      <p><strong>Merging Behavior</strong>: In class components, <code>setState</code> merges the new state with the existing state, unlike <code>useState</code>, which replaces the state.</p>
+    </div>
+
+    <div class="section">
+      <h2>Advanced State Management</h2>
+
+      <h3>Using <code>useReducer</code> for Complex State</h3>
+      <p>For complex state logic, the <code>useReducer</code> hook is often better than <code>useState</code>. It’s similar to Redux, using a reducer function to manage state transitions.</p>
+      <pre>
+<span class="code-keyword">import</span> React, { <span class="code-function">useReducer</span> } from <span class="code-string">'react'</span>;
+
+<span class="code-keyword">const</span> initialState = { count: <span class="code-number">0</span> };
+
+<span class="code-keyword">function</span> <span class="code-function">reducer</span>(state, action) {
+  <span class="code-keyword">switch</span> (action.type) {
+    <span class="code-keyword">case</span> <span class="code-string">'increment'</span>:
+      <span class="code-keyword">return</span> { count: state.count + <span class="code-number">1</span> };
+    <span class="code-keyword">case</span> <span class="code-string">'decrement'</span>:
+      <span class="code-keyword">return</span> { count: state.count - <span class="code-number">1</span> };
+    <span class="code-keyword">default</span>:
+      <span class="code-keyword">return</span> state;
+  }
+}
+
+<span class="code-keyword">function</span> Counter() {
+  <span class="code-keyword">const</span> [state, dispatch] = <span class="code-function">useReducer</span>(reducer, initialState);
+
+  <span class="code-keyword">return</span> (
+    &lt;div&gt;
+      &lt;p&gt;Count: {state.count}&lt;/p&gt;
+      &lt;button onClick={() => dispatch({ type: <span class="code-string">'increment'</span> })}&gt;Increment&lt;/button&gt;
+      &lt;button onClick={() => dispatch({ type: <span class="code-string">'decrement'</span> })}&gt;Decrement&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}
+      </pre>
+      <p>
+        - <code>useReducer</code> takes a reducer function and initial state.<br>
+        - <code>dispatch</code> sends actions to the reducer to update state.<br>
+        - Useful for managing complex state transitions or multiple related state values.
+      </p>
+
+      <h3>Lifting State Up</h3>
+      <p>When multiple components need to share state, "lift" the state to their closest common ancestor and pass it down via props.</p>
+      <pre>
+<span class="code-keyword">import</span> React, { <span class="code-function">useState</span> } from <span class="code-string">'react'</span>;
+
+<span class="code-keyword">function</span> Parent() {
+  <span class="code-keyword">const</span> [count, setCount] = <span class="code-function">useState</span>(<span class="code-number">0</span>);
+
+  <span class="code-keyword">return</span> (
+    &lt;div&gt;
+      &lt;Child count={count} setCount={setCount} /&gt;
+    &lt;/div&gt;
+  );
+}
+
+<span class="code-keyword">function</span> Child({ count, setCount }) {
+  <span class="code-keyword">return</span> (
+    &lt;div&gt;
+      &lt;p&gt;Count: {count}&lt;/p&gt;
+      &lt;button onClick={() => setCount(count + <span class="code-number">1</span>)}&gt;Increment&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}
+      </pre>
+      <p>
+        - The state is managed in <code>Parent</code> and passed to <code>Child</code> via props.<br>
+        - This pattern keeps state synchronized across components.
+      </p>
+
+      <h3>Context API for Global State</h3>
+      <p>For state that needs to be accessed by many components, use the Context API to avoid prop drilling.</p>
+      <pre>
+<span class="code-keyword">import</span> React, { <span class="code-function">createContext</span>, <span class="code-function">useContext</span>, <span class="code-function">useState</span> } from <span class="code-string">'react'</span>;
+
+<span class="code-keyword">const</span> CountContext = <span class="code-function">createContext</span>();
+
+<span class="code-keyword">function</span> App() {
+  <span class="code-keyword">const</span> [count, setCount] = <span class="code-function">useState</span>(<span class="code-number">0</span>);
+
+  <span class="code-keyword">return</span> (
+    &lt;CountContext.Provider value={{ count, setCount }}&gt;
+      &lt;Child /&gt;
+    &lt;/CountContext.Provider&gt;
+  );
+}
+
+<span class="code-keyword">function</span> Child() {
+  <span class="code-keyword">const</span> { count, setCount } = <span class="code-function">useContext</span>(CountContext);
+
+  <span class="code-keyword">return</span> (
+    &lt;div&gt;
+      &lt;p&gt;Count: {count}&lt;/p&gt;
+      &lt;button onClick={() => setCount(count + <span class="code-number">1</span>)}&gt;Increment&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}
+      </pre>
+      <p>
+        - <code>createContext</code> creates a context object.<br>
+        - <code>Provider</code> makes the state available to all descendants.<br>
+        - <code>useContext</code> accesses the state in child components.
+      </p>
+
+      <h3>External State Management (e.g., Redux)</h3>
+      <p>For large applications, libraries like Redux or Zustand can manage global state. These are outside React’s core but integrate well with React components.</p>
+    </div>
+
+    <div class="section">
+      <h2>Best Practices for Managing State</h2>
+      <ol>
+        <li><strong>Keep State Minimal</strong>: Only store data in state that directly affects the UI. Avoid duplicating data or storing computed values.</li>
+        <li><strong>Use Descriptive Names</strong>: Name state variables and update functions clearly (e.g., <code>count</code> and <code>setCount</code>).</li>
+        <li><strong>Avoid Direct Mutations</strong>: Always create new copies of objects or arrays when updating state.</li>
+        <li><strong>Batch Updates</strong>: React batches state updates for performance. Be cautious when relying on immediate state changes.</li>
+        <li><strong>Use <code>useReducer</code> for Complex Logic</strong>: If state transitions involve multiple steps or conditions, <code>useReducer</code> is clearer than multiple <code>useState</code> calls.</li>
+        <li><strong>Memoize Expensive Computations</strong>: Use <code>useMemo</code> or <code>useCallback</code> to prevent unnecessary recalculations or re-renders caused by state changes.</li>
+        <li><strong>Avoid Overusing Context</strong>: Use Context for global state, but prefer props or lifting state up for local state to keep components modular.</li>
+      </ol>
+    </div>
+
+    <div class="section">
+      <h2>Common Pitfalls and How to Avoid Them</h2>
+      <ol>
+        <li><strong>Stale State in Event Handlers</strong>:
+          <ul>
+            <li><strong>Problem</strong>: Using outdated state values in asynchronous operations (e.g., <code>setTimeout</code>).</li>
+            <li><strong>Solution</strong>: Use the functional update form (<code>setCount(prev => prev + 1)</code>).</li>
+          </ul>
+        </li>
+        <li><strong>Unnecessary Re-renders</strong>:
+          <ul>
+            <li><strong>Problem</strong>: Updating state unnecessarily or passing new object references in props.</li>
+            <li><strong>Solution</strong>: Use <code>useMemo</code> or <code>useCallback</code> to memoize values or functions.</li>
+          </ul>
+        </li>
+        <li><strong>Mutating State Directly</strong>:
+          <ul>
+            <li><strong>Problem</strong>: Modifying state directly (e.g., <code>state.count++</code>) doesn’t trigger re-renders.</li>
+            <li><strong>Solution</strong>: Always use <code>setState</code> or <code>dispatch</code> to update state immutably.</li>
+          </ul>
+        </li>
+        <li><strong>Overcomplicating State</strong>:
+          <ul>
+            <li><strong>Problem</strong>: Using multiple <code>useState</code> hooks for related data.</li>
+            <li><strong>Solution</strong>: Combine related state into a single object or use <code>useReducer</code>.</li>
+          </ul>
+        </li>
+      </ol>
+    </div>
+
+    <div class="section">
+      <h2>Performance Considerations</h2>
+      <ul>
+        <li><strong>Batching</strong>: React batches state updates within event handlers to minimize re-renders. Be aware that updates outside event handlers (e.g., in <code>setTimeout</code>) may not batch.</li>
+        <li><strong>Memoization</strong>: Use <code>useMemo</code> for expensive calculations and <code>useCallback</code> for functions passed as props to prevent unnecessary re-renders.</li>
+        <li><strong>React.memo</strong>: Wrap components with <code>React.memo</code> to prevent re-renders when props haven’t changed.</li>
+        <li><strong>Avoid Overusing State</strong>: Derive values from state where possible instead of storing them separately.</li>
+      </ul>
+      <h3>Example: Memoizing a Derived Value</h3>
+      <pre>
+<span class="code-keyword">import</span> React, { <span class="code-function">useState</span>, <span class="code-function">useMemo</span> } from <span class="code-string">'react'</span>;
+
+<span class="code-keyword">function</span> ExpensiveComponent() {
+  <span class="code-keyword">const</span> [count, setCount] = <span class="code-function">useState</span>(<span class="code-number">0</span>);
+
+  <span class="code-keyword">const</span> doubledCount = <span class="code-function">useMemo</span>(() => {
+    <span class="code-keyword">return</span> count * <span class="code-number">2</span>; <span class="code-comment">// Expensive calculation</span>
+  }, [count]);
+
+  <span class="code-keyword">return</span> (
+    &lt;div&gt;
+      &lt;p&gt;Count: {count}&lt;/p&gt;
+      &lt;p&gt;Doubled: {doubledCount}&lt;/p&gt;
+      &lt;button onClick={() => setCount(count + <span class="code-number">1</span>)}&gt;Increment&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}
+      </pre>
+      <p>- <code>useMemo</code> ensures <code>doubledCount</code> is only recalculated when <code>count</code> changes.</p>
+    </div>
+
+    <div class="section">
+      <h2>When to Use State vs. Props</h2>
+      <ul>
+        <li><strong>State</strong>: Use for data that a component manages and updates (e.g., form inputs, toggles).</li>
+        <li><strong>Props</strong>: Use for data passed from a parent component that the child doesn’t modify.</li>
+        <li>If a child component needs to update data, pass a state-updating function as a prop or use Context.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Debugging State Issues</h2>
+      <ul>
+        <li><strong>React Developer Tools</strong>: Use the browser extension to inspect component state and re-renders.</li>
+        <li><strong>Console Logging</strong>: Log state changes to understand when and why they occur.</li>
+        <li><strong>useEffect</strong>: Use <code>useEffect</code> to track state changes and debug side effects.</li>
+      </ul>
+      <pre>
+<span class="code-function">useEffect</span>(() => {
+  console.log(<span class="code-string">'Count changed:'</span>, count);
+}, [count]);
+      </pre>
+    </div>
+
+    <div class="section">
+      <h2>Real-World Example: Form with Multiple Inputs</h2>
+      <p>Here’s a complete example combining state management techniques for a form:</p>
+      <pre>
+<span class="code-keyword">import</span> React, { <span class="code-function">useState</span> } from <span class="code-string">'react'</span>;
+
+<span class="code-keyword">function</span> RegistrationForm() {
+  <span class="code-keyword">const</span> [formData, setFormData] = <span class="code-function">useState</span>({
+    username: <span class="code-string">''</span>,
+    email: <span class="code-string">''</span>,
+    password: <span class="code-string">''</span>,
+  });
+
+  <span class="code-keyword">const</span> <span class="code-function">handleChange</span> = (e) => {
+    <span class="code-keyword">const</span> { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  <span class="code-keyword">const</span> <span class="code-function">handleSubmit</span> = (e) => {
+    e.preventDefault();
+    console.log(<span class="code-string">'Form submitted:'</span>, formData);
+  };
+
+  <span class="code-keyword">return</span> (
+    &lt;form onSubmit={handleSubmit}&gt;
+      &lt;div&gt;
+        &lt;label&gt;Username:&lt;/label&gt;
+        &lt;input
+          type=<span class="code-string">"text"</span>
+          name=<span class="code-string">"username"</span>
+          value={formData.username}
+          onChange={handleChange}
+        /&gt;
+      &lt;/div&gt;
+      &lt;div&gt;
+        &lt;label&gt;Email:&lt;/label&gt;
+        &lt;input
+          type=<span class="code-string">"email"</span>
+          name=<span class="code-string">"email"</span>
+          value={formData.email}
+          onChange={handleChange}
+        /&gt;
+      &lt;/div&gt;
+      &lt;div&gt;
+        &lt;label&gt;Password:&lt;/label&gt;
+        &lt;input
+          type=<span class="code-string">"password"</span>
+          name=<span class="code-string">"password"</span>
+          value={formData.password}
+          onChange={handleChange}
+        /&gt;
+      &lt;/div&gt;
+      &lt;button type=<span class="code-string">"submit"</span>&gt;Register&lt;/button&gt;
+    &lt;/form&gt;
+  );
+}
+      </pre>
+      <p>
+        - Uses a single state object for all form fields.<br>
+        - Updates state immutably with the spread operator.<br>
+        - Handles form submission and input changes dynamically.
+      </p>
+    </div>
+
+    <div class="section">
+      <h2>Conclusion</h2>
+      <p>React state is a powerful tool for building dynamic, interactive UIs. By mastering <code>useState</code>, <code>useReducer</code>, and related patterns like Context, you can manage state effectively in small and large applications. Always follow best practices like immutability, minimal state, and proper hook usage to ensure performant and maintainable code. For complex applications, consider external state management libraries, but for most cases, React’s built-in tools are sufficient.</p>
+      <p>If you have specific scenarios or questions about state (e.g., integrating with APIs, optimizing performance), let me know, and I can provide tailored examples!</p>
+    </div>
+  </div>
+</body>
+</html>
